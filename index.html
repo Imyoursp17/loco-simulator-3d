@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Bharat 3D Loco Pilot Simulator — WebGL Edition</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    body { margin: 0; overflow: hidden; background: #050811; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+    .cab-btn:active { transform: scale(0.94); }
+    #webglContainer canvas { width: 100% !important; height: 100% !important; display: block; }
+  </style>
+</head>
+<body class="h-screen w-screen flex flex-col overflow-hidden">
+
+  <!-- ==================== MAIN CAREER MENU ==================== -->
+  <div id="menuOverlay" class="fixed inset-0 z-50 bg-slate-950/95 flex flex-col justify-between p-4 overflow-y-auto">
+    <div class="max-w-3xl w-full mx-auto my-auto space-y-4">
+      <div class="bg-gradient-to-r from-orange-600 via-amber-500 to-emerald-600 p-0.5 rounded-2xl shadow-2xl">
+        <div class="bg-slate-900 rounded-2xl p-5 text-center">
+          <span class="text-[10px] font-bold uppercase tracking-widest px-3 py-1 bg-amber-500/20 text-amber-300 rounded-full border border-amber-500/40">
+            True 3D WebGL Engine • 100 Career Levels • APK Ready
+          </span>
+          <h1 class="text-2xl sm:text-3xl font-black text-white mt-2">INDIAN RAILWAYS 3D SIMULATOR</h1>
+          <p class="text-xs text-slate-400 mt-1">Student RRB Exam → ALP Freight → Adra–Howrah Express → Vande Bharat → Bullet Train</p>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p class="text-xs text-slate-400">Career Status & License</p>
+          <p id="rankTitle" class="text-base font-bold text-amber-400">RRB Aspirant (Cleared for Duty ✅)</p>
+          <p class="text-xs text-slate-400">Includes 3D OHE Masts, Kavach ATP, VCD Pedal, Rain Wipers & Fog Detonators</p>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="start3DSimulator(true)" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl">
+            Free Roam 3D Mode
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+        <div class="flex justify-between items-center">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-300">Select Career Level (1 – 100)</span>
+          <input id="lvlSelect" type="number" min="1" max="100" value="55" onchange="refreshBriefing()" class="bg-slate-800 border border-slate-700 text-amber-400 font-bold text-sm rounded-lg px-3 py-1 w-24 text-center" />
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+          <button onclick="setLvl(1)" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-left text-xs"><b class="text-amber-400 block">Lv 1–10</b>WDS-6 Shunting</button>
+          <button onclick="setLvl(18)" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-left text-xs"><b class="text-emerald-400 block">Lv 11–40</b>WAG-9 Coal Freight</button>
+          <button onclick="setLvl(55)" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-left text-xs"><b class="text-sky-400 block">Lv 41–70</b>WAP-7 Adra–Howrah</button>
+          <button onclick="setLvl(80)" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-left text-xs"><b class="text-orange-400 block">Lv 71–90</b>Vande Bharat 3D</button>
+          <button onclick="setLvl(98)" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-left text-xs col-span-2 sm:col-span-1"><b class="text-rose-400 block">Lv 91–100</b>Bullet Train 320</button>
+        </div>
+
+        <div id="briefingBox" class="bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-300"></div>
+
+        <button onclick="start3DSimulator(false)" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3 rounded-xl shadow-lg text-sm tracking-wide">
+          LAUNCH 3D CAB SIMULATOR →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TOP HUD BAR ==================== -->
+  <header class="bg-slate-900 border-b border-slate-800 px-3 py-1.5 flex flex-wrap items-center justify-between gap-2 text-xs z-20">
+    <div class="flex items-center gap-2">
+      <button onclick="openMenu()" class="bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded text-[11px] font-semibold border border-slate-700">← Menu</button>
+      <span id="topRouteTitle" class="font-bold text-amber-400 truncate max-w-[140px] sm:max-w-xs">Lv 55: Adra–Howrah 3D</span>
+      <span id="topLocoTag" class="bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 px-2 py-0.5 rounded text-[10px] font-mono">WAP-7</span>
+    </div>
+
+    <div class="flex items-center gap-3 font-mono text-xs">
+      <div>SPD: <span id="valSpeed" class="font-bold text-emerald-400 text-sm">0</span> <span class="text-[10px] text-slate-400">km/h</span></div>
+      <div>PERM: <span id="valLimit" class="font-bold text-amber-300">130</span></div>
+      <div>BP: <span id="valBP" class="font-bold text-sky-400">5.0</span></div>
+      <div>DIST: <span id="valDist" class="font-bold text-white">5.00</span> <span class="text-[10px] text-slate-400">km</span></div>
+    </div>
+
+    <div class="flex items-center gap-1.5 flex-wrap">
+      <button onclick="cycle3DCamera()" id="camBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded text-[11px] font-bold">🎥 3D Cam: Cab</button>
+      <button onclick="cycleWeatherMode()" id="weatherBtn" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2 py-1 rounded text-[11px]">☀️ Clear</button>
+      <button onclick="cycleWiperMode()" id="wiperBtn" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2 py-1 rounded text-[11px]">🪥 Wiper: OFF</button>
+      <button onclick="toggleNight3D()" id="nightBtn" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2 py-1 rounded text-[11px]">🌙 Night: OFF</button>
+      <button onclick="announcePA()" class="bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-1 rounded text-[11px]">📢 PA</button>
+    </div>
+  </header>
+
+  <!-- RADIO & WALKIE-TALKIE BAR -->
+  <div class="bg-slate-950 border-b border-slate-800 px-3 py-1 text-[11px] flex items-center justify-between z-20">
+    <div class="flex items-center gap-2 truncate">
+      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+      <span id="radioTicker" class="text-slate-200 font-medium truncate">CONTROL: Raise Pantograph (⚡), close VCB (🔌), get Guard Signal (🏳️), release Brakes & throttle up!</span>
+    </div>
+    <span id="vcdStatusBadge" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 shrink-0">VCD: 60s</span>
+  </div>
+
+  <!-- ==================== MAIN 3D VIEWPORT ==================== -->
+  <div class="relative flex-1 bg-black overflow-hidden">
+    <div id="webglContainer" class="absolute inset-0"></div>
+    <canvas id="hudOverlayCanvas" class="absolute inset-0 pointer-events-none"></canvas>
+
+    <!-- KAVACH TCAS DMI PANEL -->
+    <div class="absolute top-3 left-3 bg-slate-900/90 border-2 border-sky-500/70 rounded-xl p-2.5 w-60 shadow-2xl space-y-1.5 z-10">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-1">
+        <span class="text-[11px] font-extrabold text-sky-300">🛡️ KAVACH TCAS DMI</span>
+        <button onclick="resetKavachTrip()" id="kavachResetBtn" class="hidden bg-amber-500 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded animate-bounce">RESET TRIP</button>
+      </div>
+      <div class="flex items-center gap-2.5">
+        <div class="bg-slate-950 p-1.5 rounded border border-slate-800 flex flex-col gap-1">
+          <div id="lampTopY" class="w-3 h-3 rounded-full bg-slate-800"></div>
+          <div id="lampG" class="w-3 h-3 rounded-full bg-slate-800"></div>
+          <div id="lampBotY" class="w-3 h-3 rounded-full bg-slate-800"></div>
+          <div id="lampR" class="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]"></div>
+        </div>
+        <div class="text-xs flex-1">
+          <div class="flex justify-between"><span class="text-[10px] text-slate-400">Signal:</span><span id="dmiSigDist" class="font-mono font-bold">450m</span></div>
+          <p id="dmiSigAspect" class="font-bold text-red-400 text-[11px]">RED (STOP)</p>
+          <p id="dmiStatusText" class="text-[10px] text-emerald-400 font-bold truncate">ATP SUPERVISION ON</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT ACTION BUTTONS -->
+    <div class="absolute top-3 right-3 flex flex-col gap-1.5 items-end z-10">
+      <button onclick="ackVCD()" class="cab-btn bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-black px-3 py-1.5 rounded-lg shadow">
+        🦶 Acknowledge VCD Pedal (Reset 60s)
+      </button>
+      <button onclick="requestGuardDepart()" class="cab-btn bg-emerald-600/90 hover:bg-emerald-500 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow">
+        🏳️🔦 Guard Whistle & Green Signal
+      </button>
+      <button onclick="spawn3DOvertake()" class="cab-btn bg-sky-600/90 hover:bg-sky-500 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow">
+        🚄 3D Superfast Overtake on Main Line
+      </button>
+      <button onclick="testKavachRedSignal()" class="cab-btn bg-rose-600/90 hover:bg-rose-500 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow">
+        🛑 Test Red Signal @ 200m (Kavach)
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== BOTTOM CAB CONTROL DESK ==================== -->
+  <footer class="bg-slate-900 border-t-2 border-slate-700 p-2 z-20">
+    <div class="max-w-6xl mx-auto grid grid-cols-2 sm:grid-cols-12 gap-2 items-center">
+      <div class="col-span-1 sm:col-span-3 grid grid-cols-2 gap-1.5 bg-slate-950 p-2 rounded-xl border border-slate-800">
+        <button onclick="togglePanto()" id="btnPanto" class="cab-btn bg-slate-800 text-slate-300 text-[11px] font-bold py-2 px-2 rounded-lg border border-slate-700">⚡ Panto: DOWN</button>
+        <button onclick="toggleVCB()" id="btnVCB" class="cab-btn bg-slate-800 text-slate-300 text-[11px] font-bold py-2 px-2 rounded-lg border border-slate-700">🔌 VCB: OFF</button>
+        <button onclick="toggleCoupler()" id="btnCouple" class="cab-btn bg-emerald-900/50 text-emerald-300 text-[11px] font-bold py-2 px-2 rounded-lg border border-emerald-700/50">🔗 Coupled</button>
+        <button onclick="toggleLoopTrack()" id="btnLoop" class="cab-btn bg-slate-800 text-sky-300 text-[11px] font-bold py-2 px-2 rounded-lg border border-slate-700">🔀 Track: MAIN</button>
+      </div>
+
+      <div class="col-span-1 sm:col-span-3 bg-slate-950 p-2 rounded-xl border border-slate-800">
+        <div class="flex justify-between text-[11px] mb-1"><span class="text-slate-400 font-semibold">THROTTLE</span><span id="txtNotch" class="font-mono font-bold text-amber-400">N0 (IDLE)</span></div>
+        <div class="grid grid-cols-3 gap-1.5">
+          <button onclick="stepNotch(-1)" class="cab-btn bg-slate-800 text-white font-bold py-2 rounded-lg border border-slate-700 text-xs">− Notch</button>
+          <button onclick="stepNotch(1)" class="cab-btn bg-amber-500 text-slate-950 font-bold py-2 rounded-lg text-xs">+ Notch</button>
+          <button onclick="stepNotch(-9)" class="cab-btn bg-slate-800 text-rose-300 font-bold py-2 rounded-lg border border-slate-700 text-xs">Idle N0</button>
+        </div>
+      </div>
+
+      <div class="col-span-1 sm:col-span-3 bg-slate-950 p-2 rounded-xl border border-slate-800">
+        <div class="flex justify-between text-[11px] mb-1"><span class="text-slate-400 font-semibold">AIR BRAKES</span><span id="txtBrake" class="font-mono font-bold text-amber-400">SERVICE</span></div>
+        <div class="grid grid-cols-3 gap-1.5">
+          <button onclick="setBrake(0)" class="cab-btn bg-emerald-600 text-white font-bold py-2 rounded-lg text-[11px]">Release</button>
+          <button onclick="setBrake(1)" class="cab-btn bg-amber-600 text-white font-bold py-2 rounded-lg text-[11px]">Apply A-9</button>
+          <button onclick="setBrake(2)" class="cab-btn bg-rose-600 text-white font-bold py-2 rounded-lg text-[11px]">EMERG</button>
+        </div>
+      </div>
+
+      <div class="col-span-1 sm:col-span-3 bg-slate-950 p-2 rounded-xl border border-slate-800">
+        <div class="flex justify-between text-[11px] mb-1"><span class="text-slate-400 font-semibold">3D LOCO HORNS</span><span class="text-[10px] text-indigo-400 font-mono">Synthesized</span></div>
+        <div class="grid grid-cols-3 gap-1.5">
+          <button onmousedown="soundHorn(1)" ontouchstart="soundHorn(1)" class="cab-btn bg-indigo-600 text-white font-bold py-2 rounded-lg text-[11px]">📯 Horn 1</button>
+          <button onmousedown="soundHorn(2)" ontouchstart="soundHorn(2)" class="cab-btn bg-indigo-600 text-white font-bold py-2 rounded-lg text-[11px]">📯 LC Code</button>
+          <button onmousedown="soundHorn(3)" ontouchstart="soundHorn(3)" class="cab-btn bg-amber-500 text-slate-950 font-bold py-2 rounded-lg text-[11px]">📯 Musical</button>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    let audioCtx = null;
+    function initAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function soundHorn(type) {
+      initAudio(); ackVCD();
+      const now = audioCtx.currentTime;
+      const freqs = { 'WDS-6': [210, 265], 'WAG-9': [185, 245], 'WAP-7': [311, 370], 'VANDE-BHARAT': [440, 554], 'BULLET-HSR': [523, 659] }[sim.loco] || [311, 370];
+      const blast = (f1, f2, t, d) => {
+        const o1 = audioCtx.createOscillator(), o2 = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o1.type = 'sawtooth'; o2.type = 'triangle';
+        o1.frequency.setValueAtTime(f1, t); o2.frequency.setValueAtTime(f2, t);
+        g.gain.setValueAtTime(0.18, t); g.gain.exponentialRampToValueAtTime(0.001, t + d);
+        o1.connect(g); o2.connect(g); g.connect(audioCtx.destination);
+        o1.start(t); o2.start(t); o1.stop(t + d); o2.stop(t + d);
+      };
+      if (type === 1) blast(freqs[0], freqs[1], now, 0.55);
+      else if (type === 2) { blast(freqs[0], freqs[1], now, 0.22); blast(freqs[0], freqs[1], now + 0.3, 0.22); blast(freqs[0]*1.04, freqs[1]*1.04, now + 0.62, 0.85); }
+      else { blast(freqs[0], freqs[1], now, 0.3); blast(freqs[0]*1.25, freqs[1]*1.25, now + 0.32, 0.4); blast(freqs[0], freqs[1], now + 0.74, 0.45); }
+    }
+
+    function playWhistle() {
+      initAudio();
+      const now = audioCtx.currentTime;
+      for (let i = 0; i < 5; i++) {
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.frequency.setValueAtTime(2850 + (i % 2) * 320, now + i * 0.11);
+        g.gain.setValueAtTime(0.14, now + i * 0.11); g.gain.exponentialRampToValueAtTime(0.01, now + (i + 1) * 0.11);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(now + i * 0.11); o.stop(now + (i + 1) * 0.11);
+      }
+    }
+
+    function playDetonatorBang() {
+      initAudio();
+      const now = audioCtx.currentTime;
+      [0, 0.17, 0.34].forEach(off => {
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = 'sawtooth'; o.frequency.setValueAtTime(150, now + off); o.frequency.exponentialRampToValueAtTime(30, now + off + 0.14);
+        g.gain.setValueAtTime(0.55, now + off); g.gain.exponentialRampToValueAtTime(0.01, now + off + 0.14);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(now + off); o.stop(now + off + 0.14);
+      });
+    }
+
+    const sim = {
+      level: 55, loco: 'WAP-7', color: 0xdc2626, maxSpeed: 130, permSpeed: 130,
+      speed: 0, notch: 0, brake: 1, bp: 3.8, panto: false, vcb: false, coupled: true,
+      loopLine: false, trackX: 0, targetTrackX: 0,
+      distKm: 5.0, sigDist: 450, sigAspect: 'RED',
+      kavachTrip: false, vcdTimer: 60,
+      weather: 'CLEAR', wiper: 0, wiperAngle: 0, wiperDir: 1, wetness: 0,
+      night: false, camMode: 0, detArmed: true, detFlash: 0,
+      overtakeActive: false, overtakeZ: 120
+    };
+
+    function getLvlConfig(l) {
+      if (l <= 10) return { loco: 'WDS-6', col: 0xd97706, max: 60, title: `Lv ${l}: Yard Shunting & Coupling`, desc: '3D Yard Shunting with Guard hand signals & coupling.' };
+      if (l <= 40) return { loco: 'WAG-9', col: 0x16a34a, max: 100, title: `Lv ${l}: Heavy Coal Freight`, desc: 'Haul heavy BOXN freight rake with Fog Detonators & VCD.' };
+      if (l <= 70) return { loco: 'WAP-7', col: 0xdc2626, max: 130, title: `Lv ${l}: Adra–Howrah Express`, desc: 'Switch to Loop Line for 3D Superfast Overtake & Kavach ATP.' };
+      if (l <= 90) return { loco: 'VANDE-BHARAT', col: 0x2563eb, max: 160, title: `Lv ${l}: Vande Bharat Express`, desc: '160 km/h Semi-High Speed run with full Kavach supervision.' };
+      return { loco: 'BULLET-HSR', col: 0xe11d48, max: 320, title: `Lv ${l}: MAHSR Bullet Train`, desc: '320 km/h High-Speed Rail corridor precision run.' };
+    }
+
+    function setLvl(n) { document.getElementById('lvlSelect').value = n; refreshBriefing(); }
+    function refreshBriefing() {
+      const l = Math.max(1, Math.min(100, parseInt(document.getElementById('lvlSelect').value) || 55));
+      const c = getLvlConfig(l);
+      document.getElementById('briefingBox').innerHTML = `<b class="text-amber-400">${c.title} (${c.loco})</b><br>${c.desc} • Max Speed: <b>${c.max} km/h</b>`;
+    }
+    refreshBriefing();
+
+    const container = document.getElementById('webglContainer');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0ea5e9);
+    scene.fog = new THREE.FogExp2(0xbae6fd, 0.0025);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+    scene.add(ambientLight);
+    const sunLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    sunLight.position.set(40, 80, 30);
+    scene.add(sunLight);
+
+    const groundMat = new THREE.MeshLambertMaterial({ color: 0x365314 });
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(600, 1200), groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.z = -400;
+    scene.add(ground);
+
+    function createTrackBed(xOffset) {
+      const group = new THREE.Group();
+      const ballast = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.25, 1000), new THREE.MeshLambertMaterial({ color: 0x57534e }));
+      ballast.position.set(xOffset, 0.12, -400);
+      group.add(ballast);
+
+      const railGeo = new THREE.BoxGeometry(0.12, 0.18, 1000);
+      const railMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.8, roughness: 0.3 });
+      const leftRail = new THREE.Mesh(railGeo, railMat);
+      leftRail.position.set(xOffset - 0.84, 0.3, -400);
+      const rightRail = new THREE.Mesh(railGeo, railMat);
+      rightRail.position.set(xOffset + 0.84, 0.3, -400);
+      group.add(leftRail, rightRail);
+      return group;
+    }
+    scene.add(createTrackBed(0));
+    scene.add(createTrackBed(5.5));
+
+    const sleepers = [];
+    const sleeperGeo = new THREE.BoxGeometry(2.6, 0.12, 0.35);
+    const sleeperMat = new THREE.MeshLambertMaterial({ color: 0x94a3b8 });
+    for (let i = 0; i < 90; i++) {
+      const s1 = new THREE.Mesh(sleeperGeo, sleeperMat);
+      s1.position.set(0, 0.24, -i * 5);
+      const s2 = new THREE.Mesh(sleeperGeo, sleeperMat);
+      s2.position.set(5.5, 0.24, -i * 5);
+      scene.add(s1, s2);
+      sleepers.push(s1, s2);
+    }
+
+    const ohePortals = [];
+    const mastMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.6 });
+    for (let i = 0; i < 18; i++) {
+      const pGroup = new THREE.Group();
+      const mLeft = new THREE.Mesh(new THREE.BoxGeometry(0.25, 7.5, 0.25), mastMat);
+      mLeft.position.set(-2.6, 3.75, 0);
+      const mRight = new THREE.Mesh(new THREE.BoxGeometry(0.25, 7.5, 0.25), mastMat);
+      mRight.position.set(8.2, 3.75, 0);
+      const beam = new THREE.Mesh(new THREE.BoxGeometry(11.2, 0.22, 0.22), mastMat);
+      beam.position.set(2.8, 6.8, 0);
+      pGroup.add(mLeft, mRight, beam);
+      pGroup.position.z = -i * 25;
+      scene.add(pGroup);
+      ohePortals.push(pGroup);
+    }
+
+    const playerTrain = new THREE.Group();
+    const locoBodyMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.4 });
+    const locoMesh = new THREE.Mesh(new THREE.BoxGeometry(3.1, 3.8, 14), locoBodyMat);
+    locoMesh.position.set(0, 2.2, 0);
+    playerTrain.add(locoMesh);
+
+    const windshieldMesh = new THREE.Mesh(new THREE.BoxGeometry(2.7, 0.9, 0.2), new THREE.MeshBasicMaterial({ color: 0x0f172a }));
+    windshieldMesh.position.set(0, 3.1, -7.01);
+    playerTrain.add(windshieldMesh);
+
+    const pantoGroup = new THREE.Group();
+    const pantoBar = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.12, 0.8), new THREE.MeshBasicMaterial({ color: 0xfbbf24 }));
+    pantoGroup.add(pantoBar);
+    pantoGroup.position.set(0, 4.2, -3);
+    playerTrain.add(pantoGroup);
+
+    const locoSpotlight = new THREE.SpotLight(0xfef08a, 0, 180, Math.PI / 5, 0.4);
+    locoSpotlight.position.set(0, 3.6, -7.2);
+    locoSpotlight.target.position.set(0, 0.5, -90);
+    playerTrain.add(locoSpotlight);
+    playerTrain.add(locoSpotlight.target);
+    scene.add(playerTrain);
+
+    const signalPostGroup = new THREE.Group();
+    const postMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 5.5), new THREE.MeshLambertMaterial({ color: 0xcbd5e1 }));
+    postMesh.position.y = 2.75;
+    const housingMesh = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.8, 0.4), new THREE.MeshBasicMaterial({ color: 0x0f172a }));
+    housingMesh.position.y = 5.2;
+    const sigGlowMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+    const sigLampMesh = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 12), sigGlowMat);
+    sigLampMesh.position.set(0, 5.2, 0.22);
+    signalPostGroup.add(postMesh, housingMesh, sigLampMesh);
+    signalPostGroup.position.set(-2.2, 0, -450);
+    scene.add(signalPostGroup);
+
+    const overtakeGroup = new THREE.Group();
+    for (let c = 0; c < 4; c++) {
+      const coach = new THREE.Mesh(new THREE.BoxGeometry(3.0, 3.7, 16), new THREE.MeshStandardMaterial({ color: c === 0 ? 0x2563eb : 0x1e40af }));
+      coach.position.set(0, 2.15, c * 17);
+      overtakeGroup.add(coach);
+    }
+    overtakeGroup.position.set(5.5, 0, 120);
+    scene.add(overtakeGroup);
+
+    function setRadio(txt) { document.getElementById('radioTicker').textContent = txt; }
+
+    function start3DSimulator(freeRoam) {
+      initAudio();
+      const l = Math.max(1, Math.min(100, parseInt(document.getElementById('lvlSelect').value) || 55));
+      const cfg = getLvlConfig(l);
+      sim.level = l; sim.loco = cfg.loco; sim.maxSpeed = cfg.max; sim.permSpeed = cfg.max;
+      locoBodyMat.color.setHex(cfg.col);
+      sim.speed = 0; sim.notch = 0; sim.brake = 1; sim.sigDist = 450; sim.sigAspect = 'RED';
+      sim.distKm = 4.5; sim.vcdTimer = 60; sim.kavachTrip = false;
+      document.getElementById('topRouteTitle').textContent = freeRoam ? 'FREE ROAM 3D' : cfg.title;
+      document.getElementById('topLocoTag').textContent = cfg.loco;
+      document.getElementById('menuOverlay').classList.add('hidden');
+      syncDeskUI();
+      updateSignalLamp();
+    }
+
+    function openMenu() { sim.speed = 0; sim.notch = 0; document.getElementById('menuOverlay').classList.remove('hidden'); }
+
+    function ackVCD() {
+      sim.vcdTimer = 60;
+      document.getElementById('vcdStatusBadge').textContent = `VCD: 60s`;
+      document.getElementById('vcdStatusBadge').className = 'text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 shrink-0';
+    }
+
+    function togglePanto() {
+      initAudio(); ackVCD();
+      sim.panto = !sim.panto;
+      if (!sim.panto) { sim.vcb = false; sim.notch = 0; }
+      setRadio(sim.panto ? "⚡ 3D PANTOGRAPH RAISED to 25kV OHE Wire! Now close VCB." : "⚡ Pantograph lowered.");
+      syncDeskUI();
+    }
+
+    function toggleVCB() {
+      ackVCD();
+      if (!sim.panto) { setRadio("⚠️ Raise Pantograph first before closing VCB!"); return; }
+      sim.vcb = !sim.vcb;
+      if (!sim.vcb) sim.notch = 0;
+      setRadio(sim.vcb ? "🔌 VCB CLOSED! Get Guard Green Signal & release brakes." : "🔌 VCB Opened.");
+      syncDeskUI();
+    }
+
+    function toggleCoupler() {
+      if (sim.speed > 2) { setRadio("⚠️ Halt train before uncoupling!"); return; }
+      sim.coupled = !sim.coupled;
+      setRadio(sim.coupled ? "🔗 Shunting Staff coupled rake & connected BP air pipe!" : "⛓️ Uncoupled! Light engine mode.");
+      syncDeskUI();
+    }
+
+    function toggleLoopTrack() {
+      if (sim.speed > 45) { setRadio("⚠️ Slow down below 45 km/h to switch points!"); return; }
+      sim.loopLine = !sim.loopLine;
+      sim.targetTrackX = sim.loopLine ? -4.2 : 0;
+      setRadio(sim.loopLine ? "🔀 Switched to LOOP LINE (30 km/h limit). Wait for Superfast overtake!" : "🔀 Switched to MAIN LINE.");
+      syncDeskUI();
+    }
+
+    function requestGuardDepart() {
+      if (!sim.panto || !sim.vcb) { setRadio("⚠️ Raise Panto & switch VCB ON first!"); return; }
+      playWhistle();
+      sim.sigAspect = 'GREEN';
+      updateSignalLamp();
+      setRadio(sim.night ? "🔦 GUARD: *Whistle!* Green LED Torch waved! Sound Horn & Release Brakes!" : "🏳️ GUARD: *Whistle!* Green Flag waved! Sound Horn & Depart!");
+    }
+
+    function spawn3DOvertake() {
+      sim.loopLine = true;
+      sim.targetTrackX = -4.2;
+      sim.sigAspect = 'RED';
+      sim.overtakeActive = true;
+      sim.overtakeZ = 90;
+      updateSignalLamp();
+      syncDeskUI();
+      setRadio("🚄 ADRA–HOWRAH CONTROL: Wait on Loop Line! 3D Superfast Express is overtaking on Main Line!");
+    }
+
+    function testKavachRedSignal() {
+      sim.panto = true; sim.vcb = true; sim.brake = 0;
+      sim.sigAspect = 'RED'; sim.sigDist = 200; sim.speed = 92;
+      updateSignalLamp(); syncDeskUI();
+      setRadio("🛑 KAVACH TEST: Approaching 3D Red Signal at 92 km/h! Watch Kavach auto-brake!");
+    }
+
+    function resetKavachTrip() {
+      if (sim.speed <= sim.permSpeed) {
+        sim.kavachTrip = false;
+        sim.brake = 1;
+        document.getElementById('kavachResetBtn').classList.add('hidden');
+        document.getElementById('dmiStatusText').textContent = 'ATP SUPERVISION ON';
+        document.getElementById('dmiStatusText').className = 'text-[10px] text-emerald-400 font-bold truncate';
+        syncDeskUI();
+        setRadio("✅ Kavach Trip Reset! Release brakes to proceed.");
+      }
+    }
+
+    function stepNotch(d) {
+      ackVCD();
+      if (!sim.panto || !sim.vcb || sim.kavachTrip) return;
+      sim.notch = Math.max(0, Math.min(8, sim.notch + d));
+      syncDeskUI();
+    }
+
+    function setBrake(b) {
+      ackVCD();
+      if (sim.kavachTrip && b === 0) { setRadio("⚠️ Click RESET TRIP on Kavach DMI first!"); return; }
+      sim.brake = b;
+      if (b === 2) sim.notch = 0;
+      syncDeskUI();
+    }
+
+    function cycle3DCamera() {
+      sim.camMode = (sim.camMode + 1) % 3;
+      const labels = ['🎥 3D Cam: Cab', '🎥 3D Cam: Drone Chase', '🎥 3D Cam: Trackside'];
+      document.getElementById('camBtn').textContent = labels[sim.camMode];
+    }
+
+    function cycleWeatherMode() {
+      const m = ['CLEAR', 'MONSOON', 'FOG'];
+      sim.weather = m[(m.indexOf(sim.weather) + 1) % 3];
+      document.getElementById('weatherBtn').textContent = sim.weather === 'CLEAR' ? '☀️ Clear' : (sim.weather === 'MONSOON' ? '🌧️ Monsoon' : '🌫️ Dense Fog');
+      sim.detArmed = true;
+      update3DAtmosphere();
+    }
+
+    function cycleWiperMode() {
+      sim.wiper = (sim.wiper + 1) % 3;
+      document.getElementById('wiperBtn').textContent = ['🪥 Wiper: OFF', '🪥 Wiper: LOW', '🪥 Wiper: FAST'][sim.wiper];
+    }
+
+    function toggleNight3D() {
+      sim.night = !sim.night;
+      document.getElementById('nightBtn').textContent = sim.night ? '🌙 Night: ON' : '🌙 Night: OFF';
+      locoSpotlight.intensity = sim.night ? 3.5 : 0;
+      ambientLight.intensity = sim.night ? 0.18 : 0.75;
+      sunLight.intensity = sim.night ? 0.1 : 0.9;
+      update3DAtmosphere();
+    }
+
+    function update3DAtmosphere() {
+      if (sim.night) {
+        scene.background.setHex(0x020617);
+        scene.fog.color.setHex(0x020617);
+        scene.fog.density = sim.weather === 'FOG' ? 0.018 : 0.004;
+      } else if (sim.weather === 'FOG') {
+        scene.background.setHex(0xcbd5e1);
+        scene.fog.color.setHex(0xcbd5e1);
+        scene.fog.density = 0.016;
+      } else if (sim.weather === 'MONSOON') {
+        scene.background.setHex(0x334155);
+        scene.fog.color.setHex(0x475569);
+        scene.fog.density = 0.005;
+      } else {
+        scene.background.setHex(0x0ea5e9);
+        scene.fog.color.setHex(0xbae6fd);
+        scene.fog.density = 0.002;
+      }
+    }
+
+    function announcePA() {
+      const txt = "Yatri kripya dhyan dein. Train number 1 2 8 2 7, Howrah Superfast Express platform kramank 2 par aa rahi hai.";
+      setRadio("📢 PA: " + txt);
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(txt); u.lang = 'hi-IN'; window.speechSynthesis.speak(u);
+      }
+    }
+
+    function syncDeskUI() {
+      document.getElementById('btnPanto').textContent = sim.panto ? "⚡ Panto: UP" : "⚡ Panto: DOWN";
+      document.getElementById('btnVCB').textContent = sim.vcb ? "🔌 VCB: ON" : "🔌 VCB: OFF";
+      document.getElementById('btnCouple').textContent = sim.coupled ? "🔗 Coupled" : "⛓️ Light Engine";
+      document.getElementById('btnLoop').textContent = sim.loopLine ? "🔀 Track: LOOP" : "🔀 Track: MAIN";
+      document.getElementById('txtNotch').textContent = sim.notch === 0 ? "N0 (IDLE)" : `NOTCH ${sim.notch}`;
+      document.getElementById('txtBrake').textContent = sim.brake === 0 ? "RELEASED" : (sim.brake === 1 ? "A-9 SERVICE" : "EMERGENCY!");
+    }
+
+    function updateSignalLamp() {
+      const r = document.getElementById('lampR'), y1 = document.getElementById('lampBotY'), y2 = document.getElementById('lampTopY'), g = document.getElementById('lampG');
+      r.className = y1.className = y2.className = g.className = "w-3 h-3 rounded-full bg-slate-800";
+      const txt = document.getElementById('dmiSigAspect');
+
+      if (sim.sigAspect === 'RED') {
+        r.className = "w-3 h-3 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]";
+        txt.textContent = "RED (STOP)"; txt.className = "font-bold text-red-400 text-[11px]";
+        sigGlowMat.color.setHex(0xef4444);
+      } else if (sim.sigAspect === 'YELLOW') {
+        y1.className = "w-3 h-3 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]";
+        txt.textContent = "YELLOW (CAUTION)"; txt.className = "font-bold text-amber-400 text-[11px]";
+        sigGlowMat.color.setHex(0xfbbf24);
+      } else if (sim.sigAspect === 'DOUBLE_YELLOW') {
+        y1.className = y2.className = "w-3 h-3 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]";
+        txt.textContent = "DOUBLE YELLOW"; txt.className = "font-bold text-amber-300 text-[11px]";
+        sigGlowMat.color.setHex(0xfde047);
+      } else {
+        g.className = "w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]";
+        txt.textContent = "GREEN (PROCEED)"; txt.className = "font-bold text-emerald-400 text-[11px]";
+        sigGlowMat.color.setHex(0x22c55e);
+      }
+    }
+
+    const hudCanvas = document.getElementById('hudOverlayCanvas');
+    const hCtx = hudCanvas.getContext('2d');
+    function resizeAll() {
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      hudCanvas.width = container.clientWidth;
+      hudCanvas.height = container.clientHeight;
+    }
+    window.addEventListener('resize', resizeAll);
+    resizeAll();
+
+    let prevTime = performance.now();
+    function animate(now) {
+      const dt = Math.min(0.1, (now - prevTime) / 1000);
+      prevTime = now;
+
+      if (sim.speed > 5) {
+        sim.vcdTimer = Math.max(0, sim.vcdTimer - dt);
+        document.getElementById('vcdStatusBadge').textContent = `VCD: ${Math.ceil(sim.vcdTimer)}s`;
+        if (sim.vcdTimer <= 10) document.getElementById('vcdStatusBadge').className = 'text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-rose-600 text-white animate-pulse';
+        if (sim.vcdTimer <= 0 && !sim.kavachTrip) {
+          sim.kavachTrip = true; sim.notch = 0; sim.brake = 2;
+          setRadio("🚨 VCD PENALTY BRAKE! You did not acknowledge the Vigilance Pedal within 60s!");
+        }
+      }
+
+      let limit = sim.loopLine ? Math.min(sim.maxSpeed, 30) : sim.maxSpeed;
+      if (sim.sigAspect === 'YELLOW') limit = Math.min(limit, 55);
+      if (sim.sigAspect === 'RED') limit = Math.min(limit, Math.round(Math.sqrt(Math.max(0, sim.sigDist - 28) * 14)));
+      sim.permSpeed = limit;
+
+      if ((sim.sigAspect === 'RED' && sim.speed > sim.permSpeed + 2 && sim.sigDist < 230) || sim.speed > sim.permSpeed + 6) {
+        if (!sim.kavachTrip) {
+          sim.kavachTrip = true; sim.notch = 0; sim.brake = 2;
+          document.getElementById('kavachResetBtn').classList.remove('hidden');
+          document.getElementById('dmiStatusText').textContent = '🚨 KAVACH AUTO-BRAKE!';
+          document.getElementById('dmiStatusText').className = 'text-[10px] text-rose-400 font-black animate-pulse';
+          setRadio("🚨 KAVACH TCAS INTERVENTION: Automatic Emergency Brakes applied to prevent SPAD / Overspeed!");
+        }
+      }
+
+      const targetBP = sim.brake === 0 ? 5.0 : (sim.brake === 1 ? 3.6 : 0.0);
+      sim.bp += (targetBP - sim.bp) * 3 * dt;
+
+      const accel = (sim.panto && sim.vcb && sim.brake === 0 && !sim.kavachTrip) ? sim.notch * 3.2 * (sim.maxSpeed / 120) : 0;
+      const decel = sim.brake === 0 ? 0.5 : (sim.brake === 1 ? 9.5 : 28.0);
+      sim.speed = Math.max(0, Math.min(sim.maxSpeed + 20, sim.speed + (accel - decel) * dt));
+
+      const mps = sim.speed / 3.6;
+      sim.distKm = Math.max(0, sim.distKm - (mps * dt) / 1000);
+
+      sim.trackX += (sim.targetTrackX - sim.trackX) * 3 * dt;
+      playerTrain.position.x = sim.trackX;
+      pantoGroup.position.y = sim.panto ? 6.5 : 4.15;
+
+      sleepers.forEach(s => {
+        s.position.z += mps * dt;
+        if (s.position.z > 15) s.position.z -= 450;
+      });
+      ohePortals.forEach(p => {
+        p.position.z += mps * dt;
+        if (p.position.z > 20) p.position.z -= 450;
+      });
+
+      const oldSig = sim.sigDist;
+      sim.sigDist -= mps * dt;
+      signalPostGroup.position.z = -sim.sigDist;
+      signalPostGroup.position.x = sim.trackX - 2.3;
+
+      if (sim.weather === 'FOG' && sim.detArmed && oldSig > 270 && sim.sigDist <= 270) {
+        sim.detArmed = false; sim.detFlash = 25;
+        playDetonatorBang();
+        setRadio("💥 BANG! BANG! BANG! 3D Track Detonators exploded at 270m! Signal ahead in dense fog!");
+      }
+
+      if (sim.sigDist <= 0) {
+        sim.sigDist = 500; sim.detArmed = true;
+        const nextAspects = ['GREEN', 'DOUBLE_YELLOW', 'YELLOW', 'GREEN'];
+        if (!sim.overtakeActive) {
+          sim.sigAspect = nextAspects[Math.floor(Math.random() * nextAspects.length)];
+          updateSignalLamp();
+        }
+      }
+
+      if (sim.overtakeActive) {
+        sim.overtakeZ -= 38 * dt;
+        overtakeGroup.position.z = sim.overtakeZ;
+        if (Math.abs(sim.overtakeZ) < 5) soundHorn(1);
+        if (sim.overtakeZ < -260) {
+          sim.overtakeActive = false;
+          sim.sigAspect = 'DOUBLE_YELLOW';
+          updateSignalLamp();
+          setRadio("✅ 3D OVERTAKE COMPLETE: Superfast Express passed! Signal is DOUBLE YELLOW. Switch to Main Line & proceed.");
+        }
+      }
+
+      if (sim.camMode === 0) {
+        camera.position.set(sim.trackX, 3.35, -6.8);
+        camera.lookAt(sim.trackX, 3.1, -120);
+      } else if (sim.camMode === 1) {
+        camera.position.set(sim.trackX + 6.5, 6.2, 16);
+        camera.lookAt(sim.trackX, 2.5, -25);
+      } else {
+        camera.position.set(sim.trackX - 5.0, 2.2, -35);
+        camera.lookAt(sim.trackX, 2.5, 0);
+      }
+
+      renderer.render(scene, camera);
+
+      const cw = hudCanvas.width, ch = hudCanvas.height;
+      hCtx.clearRect(0, 0, cw, ch);
+      if (sim.camMode === 0 && (sim.weather === 'MONSOON' || sim.wiper > 0)) {
+        if (sim.weather === 'MONSOON') {
+          sim.wetness = Math.min(0.65, sim.wetness + dt * 0.15);
+          hCtx.fillStyle = `rgba(148, 163, 184, ${sim.wetness})`;
+          hCtx.fillRect(0, 0, cw, ch);
+        }
+        if (sim.wiper > 0) {
+          sim.wiperAngle += sim.wiperDir * (sim.wiper * 2.2) * dt;
+          if (sim.wiperAngle > 0.65) { sim.wiperAngle = 0.65; sim.wiperDir = -1; }
+          if (sim.wiperAngle < -0.65) { sim.wiperAngle = -0.65; sim.wiperDir = 1; }
+          sim.wetness = Math.max(0.05, sim.wetness - dt * 0.5);
+        }
+        [cw * 0.35, cw * 0.65].forEach(px => {
+          const tx = px + Math.sin(sim.wiperAngle) * (ch * 0.75);
+          const ty = ch - Math.cos(sim.wiperAngle) * (ch * 0.75);
+          hCtx.strokeStyle = '#0f172a'; hCtx.lineWidth = 6;
+          hCtx.beginPath(); hCtx.moveTo(px, ch); hCtx.lineTo(tx, ty); hCtx.stroke();
+        });
+      }
+
+      if (sim.detFlash > 0) {
+        sim.detFlash--;
+        hCtx.fillStyle = `rgba(251, 191, 36, ${sim.detFlash / 30})`;
+        hCtx.fillRect(0, 0, cw, ch);
+      }
+
+      document.getElementById('valSpeed').textContent = Math.round(sim.speed);
+      document.getElementById('valLimit').textContent = sim.permSpeed;
+      document.getElementById('valBP').textContent = sim.bp.toFixed(1);
+      document.getElementById('valDist').textContent = sim.distKm.toFixed(2);
+      document.getElementById('dmiSigDist').textContent = `${Math.round(sim.sigDist)}m`;
+
+      requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
